@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useLanguage } from "@/lib/language";
+import Link from "next/link";
 
 type Appointment = {
   client_email: string | null;
@@ -277,6 +278,12 @@ export default function DashboardPage() {
           >
             {lang === "en" ? "AZ" : "EN"}
           </button>
+          <Link
+            href="/services"
+            className="rounded border border-gray-600 px-3 py-1 text-sm"
+          >
+            Services
+          </Link>
           <span
             className={`rounded-full px-3 py-1 text-sm font-medium ${
               plan === "pro" ? "bg-green-600" : "bg-gray-700"
