@@ -159,6 +159,23 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleManage() {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    const res = await fetch("/api/portal", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    if (json.url) {
+      window.location.href = json.url;
+    } else {
+      setMessage(json.error ?? "Something went wrong");
+    }
+  }
+
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -204,6 +221,14 @@ export default function DashboardPage() {
               onClick={handleUpgrade}
             >
               Upgrade to Pro
+            </button>
+          )}
+          {plan === "pro" && (
+            <button
+              className="rounded border border-gray-600 px-4 py-2 text-sm"
+              onClick={handleManage}
+            >
+              Manage subscription
             </button>
           )}
           <button
