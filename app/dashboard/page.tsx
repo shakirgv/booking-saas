@@ -16,14 +16,14 @@ const inputClass = "w-72 rounded border border-gray-500 bg-gray-800 p-2 text-whi
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [email, setEmail] = useState(" ");
-    const [userId, setUserId] = useState(" ");
+    const [email, setEmail] = useState("");
+    const [userId, setUserId] = useState("");
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [clientName, setClientname] = useState(" ");
-    const [service, setService] = useState(" ");
-    const [startsAt, setStartsAt] = useState(" ");
-    const [notes, setNotes] = useState(" ");
-    const [message, setMessage] = useState(" ");
+    const [clientName, setClientname] = useState("");
+    const [service, setService] = useState("");
+    const [startsAt, setStartsAt] = useState("");
+    const [notes, setNotes] = useState("");
+    const [message, setMessage] = useState("");
 
     async function loadAppointments() {
         const supabase = createClient();
@@ -74,6 +74,17 @@ export default function DashboardPage() {
             setStartsAt("");
             setNotes("");
             loadAppointments();
+    }
+}
+
+async function handleDelete(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("appointments").delete().eq("id", id);
+    if (error) {
+        setMessage(error.message);
+    } else {
+        setMessage("Appointment deleted.");
+        loadAppointments();
     }
 }
 
@@ -131,6 +142,11 @@ return (
                         {new Date(a.starts_at).toLocaleString()}
                     </p>
                     {a.notes && <p className="text-sm">{a.notes}</p>}
+                    <button 
+                    className="mt-2 rounded bg-red-600 px-3 py-1 text-sm"
+                    onClick={() => handleDelete(a.id)}> 
+                    Delete 
+                    </button>
                 </li>
             ))}
         </ul>
