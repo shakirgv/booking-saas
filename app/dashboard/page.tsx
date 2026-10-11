@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { translations, type Lang } from "@/lib/translations";
 
 type Appointment = {
   client_email: string | null;
@@ -79,6 +80,9 @@ export default function DashboardPage() {
   const [plan, setPlan] = useState("free");
   const [search, setSearch] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [lang, setLang] = useState<Lang>("en");
+  const t = translations[lang];
+  const locale = lang === "az" ? "az-AZ" : "en-GB";
   const [clientEmail, setClientEmail] = useState("");
 
   async function loadPlan() {
@@ -115,11 +119,25 @@ export default function DashboardPage() {
     });
   }, [router]);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lang");
+      if (saved === "en" || saved === "az") setLang(saved);
+    } catch {}
+  }, []);
+
+  function changeLang(next: Lang) {
+    setLang(next);
+    try {
+      localStorage.setItem("lang", next);
+    } catch {}
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     const date = new Date(startsAt);
     if (isNaN(date.getTime())) {
-      setMessage("Please choose a valid date and time");
+      setMessage(t.invalidDate);
       return;
     }
     const supabase = createClient();
@@ -140,7 +158,7 @@ export default function DashboardPage() {
     if (error) {
       setMessage(error.message);
     } else {
-      setMessage(editingId ? "Appointment updated!" : "Appointment added!");
+      setMessage(editingId ? t.updated : t.added);
       setClientname("");
       setService("");
       setStartsAt("");
@@ -177,7 +195,7 @@ export default function DashboardPage() {
     if (error) {
       setMessage(error.message);
     } else {
-      setMessage("Appointment deleted.");
+      setMessage(t.deleted);
       loadAppointments();
     }
   }
@@ -195,7 +213,7 @@ export default function DashboardPage() {
     if (json.url) {
       window.location.href = json.url;
     } else {
-      setMessage(json.error ?? "Something went wrong");
+      setMessage(json.error ?? t.error);
     }
   }
 
@@ -212,7 +230,7 @@ export default function DashboardPage() {
     if (json.url) {
       window.location.href = json.url;
     } else {
-      setMessage(json.error ?? "Something went wrong");
+      setMessage(json.error ?? t.error);
     }
   }
 
@@ -230,9 +248,7 @@ export default function DashboardPage() {
       body: JSON.stringify({ appointmentId: id }),
     });
     const json = await res.json();
-    setMessage(
-      json.sent ? "Reminder sent!" : (json.error ?? "Something went wrong"),
-    );
+    setMessage(json.sent ? t.reminderSent : (json.error ?? t.error));
   }
 
   async function handleSignOut() {
@@ -270,19 +286,25 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-400">{email}</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            className="rounded border border-gray-600 px-3 py-1 text-sm"
+            onClick={() => changeLang(lang === "en" ? "az" : "en")}
+          >
+            {lang === "en" ? "AZ" : "EN"}
+          </button>
           <span
             className={`rounded-full px-3 py-1 text-sm font-medium ${
               plan === "pro" ? "bg-green-600" : "bg-gray-700"
             }`}
           >
-            {plan === "pro" ? "Pro" : "Free"}
+            {plan === "pro" ? t.pro : t.free}
           </span>
           {plan !== "pro" && (
             <button
               className="rounded bg-green-600 px-4 py-2 text-sm font-medium"
               onClick={handleUpgrade}
             >
-              Upgrade to Pro
+              {t.upgrade}
             </button>
           )}
           {plan === "pro" && (
@@ -290,14 +312,14 @@ export default function DashboardPage() {
               className="rounded border border-gray-600 px-4 py-2 text-sm"
               onClick={handleManage}
             >
-              Manage subscription
+              {t.manage}
             </button>
           )}
           <button
             className="rounded border border-gray-600 px-4 py-2 text-sm"
             onClick={handleSignOut}
           >
-            Sign out
+            {t.signOut}
           </button>
         </div>
       </header>
@@ -312,18 +334,18 @@ export default function DashboardPage() {
           className="flex flex-col gap-3 rounded-lg border border-gray-700 p-5 md:col-span-1"
         >
           <h2 className="text-lg font-bold">
-            {editingId ? "Edit appointment" : "New appointment"}
+            {editingId ? t.editAppointment : t.newAppointment}
           </h2>
           <input
             className={fullInputClass}
-            placeholder="Client name"
+            placeholder={t.clientName}
             value={clientName}
             onChange={(e) => setClientname(e.target.value)}
             required
           />
           <input
             className={fullInputClass}
-            placeholder="Service (e.g. Haircut)"
+            placeholder={t.service}
             value={service}
             onChange={(e) => setService(e.target.value)}
             required
@@ -338,13 +360,13 @@ export default function DashboardPage() {
           <input
             className={fullInputClass}
             type="email"
-            placeholder="Client email (optional)"
+            placeholder={t.clientEmail}
             value={clientEmail}
             onChange={(e) => setClientEmail(e.target.value)}
           />
           <input
             className={fullInputClass}
-            placeholder="Notes (optional)"
+            placeholder={t.notes}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
@@ -352,41 +374,40 @@ export default function DashboardPage() {
             type="submit"
             className="rounded bg-blue-500 px-4 py-2 font-medium"
           >
-            {editingId ? "Save changes" : "Add appointment"}
+            {editingId ? t.save : t.add}
           </button>
           {editingId && (
             <button
-            type="button"
-            className="rounded border border-gray-600 px-4 py-2"
-            onClick={handleCancelEdit}
+              type="button"
+              className="rounded border border-gray-600 px-4 py-2"
+              onClick={handleCancelEdit}
             >
-              Cancel
+              {t.cancel}
             </button>
           )}
         </form>
 
         <section className="md:col-span-2">
           <h2 className="text-lg font-bold">
-            Appointments ({filteredAppointments.length})
+            {t.appointments} ({filteredAppointments.length})
           </h2>
           <input
             className="mt-3 w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
-            placeholder="Search by client or service..."
+            placeholder={t.search}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {appointments.length === 0 ? (
-            <p className="mt-4 text-gray-400">
-              No appointments yet. Add your first one.
-            </p>
+            <p className="mt-4 text-gray-400">{t.empty}</p>
           ) : filteredAppointments.length === 0 ? (
-            <p className="mt-4 text-gray-400">No matches found.</p>
+            <p className="mt-4 text-gray-400">{t.noMatches}</p>
           ) : (
             <div className="mt-4 flex flex-col gap-6">
               {groups.map((g) => (
                 <div key={g.label}>
                   <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">
-                    {g.label} ({g.items.length})
+                    {t.groups[g.label as keyof typeof t.groups]} (
+                    {g.items.length})
                   </h3>
                   <ul className="flex flex-col gap-3">
                     {g.items.map((a) => (
@@ -413,20 +434,20 @@ export default function DashboardPage() {
                               className="rounded border border-blue-500 px-3 py-1 text-sm"
                               onClick={() => handleRemind(a.id)}
                             >
-                              Remind
+                              {t.remind}
                             </button>
                           )}
                           <button
                             className="rounded border border-gray-600 px-3 py-1 text-sm"
                             onClick={() => handleEdit(a)}
                           >
-                            Edit
+                            {t.edit}
                           </button>
                           <button
                             className="rounded bg-red-600 px-3 py-1 text-sm"
                             onClick={() => handleDelete(a.id)}
                           >
-                            Delete
+                            {t.delete}
                           </button>
                         </div>
                       </li>
@@ -441,30 +462,27 @@ export default function DashboardPage() {
       <section className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold">
-            Week of{" "}
-            {weekDays[0].toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-            })}
+            {t.weekOf} {String(weekDays[0].getDate()).padStart(2, "0")}.
+            {String(weekDays[0].getMonth() + 1).padStart(2, "0")}
           </h2>
           <div className="flex gap-2">
             <button
               className="rounded border border-gray-600 px-3 py-1 text-sm"
               onClick={() => setWeekOffset(weekOffset - 1)}
             >
-              ← Previous
+              {t.previous}
             </button>
             <button
               className="rounded border border-gray-600 px-3 py-1 text-sm"
               onClick={() => setWeekOffset(0)}
             >
-              Today
+              {t.today}
             </button>
             <button
               className="rounded border border-gray-600 px-3 py-1 text-sm"
               onClick={() => setWeekOffset(weekOffset + 1)}
             >
-              Next →
+              {t.next}
             </button>
           </div>
         </div>
@@ -483,18 +501,18 @@ export default function DashboardPage() {
                 }`}
               >
                 <p className="text-xs font-bold uppercase text-gray-400">
-                  {day.toLocaleDateString("en-GB", { weekday: "short" })}
+                  {t.days[(day.getDay() + 6) % 7]}
                 </p>
                 <p className="text-lg font-bold">{day.getDate()}</p>
                 <div className="mt-2 flex flex-col gap-2">
                   {dayAppointments.map((a) => (
                     <div
-                    key={a.id}
-                    className="cursor-pointer rounded bg-gray-800 p-2 text-xs hover:bg-gray-700"
-                    onClick={() => handleEdit(a)}
+                      key={a.id}
+                      className="cursor-pointer rounded bg-gray-800 p-2 text-xs hover:bg-gray-700"
+                      onClick={() => handleEdit(a)}
                     >
                       <p className="font-bold text-blue-400">
-                        {new Date(a.starts_at).toLocaleTimeString("en-GB", {
+                        {new Date(a.starts_at).toLocaleTimeString(locale, {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
