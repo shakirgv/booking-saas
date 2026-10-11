@@ -329,7 +329,7 @@ export default function DashboardPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-6xl p-6">
+      <main className="mx-auto max-w-6xl p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">{t.navDashboard}</h1>
@@ -399,7 +399,7 @@ export default function DashboardPage() {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-36 rounded-lg border p-2 ${
+                  className={`rounded-lg border p-2 md:min-h-36 ${
                     isToday
                       ? "border-blue-500 bg-blue-50/50"
                       : "border-slate-200"
@@ -458,7 +458,7 @@ export default function DashboardPage() {
                     {g.items.map((a) => (
                       <li
                         key={a.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3"
+                        className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div>
                           <p className="font-bold">{a.client_name}</p>

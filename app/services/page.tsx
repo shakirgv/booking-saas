@@ -96,7 +96,7 @@ export default function ServicesPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-2xl p-6">
+            <main className="mx-auto max-w-2xl p-4 sm:p-6">
         <h1 className="text-2xl font-bold">
           {editingId ? t.editService : t.services}
         </h1>
