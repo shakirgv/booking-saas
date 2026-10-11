@@ -334,6 +334,12 @@ export default function DashboardPage() {
           >
             {t.services}
           </Link>
+          <Link
+            href="/clients"
+            className="rounded border border-gray-600 px-3 py-1 text-sm"
+          >
+            {t.clients}
+          </Link>
           <span
             className={`rounded-full px-3 py-1 text-sm font-medium ${
               plan === "pro" ? "bg-green-600" : "bg-gray-700"
