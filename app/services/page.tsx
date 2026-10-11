@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase";
-import LangSwitch from "@/components/LangSwitch";
 import { useLanguage } from "@/lib/language";
+import Navbar from "@/components/Navbar";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import Card from "@/components/Card";
 
 type Service = {
   id: string;
@@ -14,20 +16,16 @@ type Service = {
   price: number | null;
 };
 
-
-const fullInputClass =
-  "w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
-
 export default function ServicesPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [userId, setUserId] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [name, setName] = useState("");
-  const [duration, setDuration] = useState("");
+  const [duration, setDuration] = useState("30");
   const [price, setPrice] = useState("");
-  const [message, setMessage] = useState("");
-  const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
 
   async function loadServices() {
     const supabase = createClient();
@@ -35,11 +33,8 @@ export default function ServicesPage() {
       .from("services")
       .select("*")
       .order("name", { ascending: true });
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setServices(data ?? []);
-    }
+    if (error) setMessage(error.message);
+    else setServices(data ?? []);
   }
 
   useEffect(() => {
@@ -54,7 +49,14 @@ export default function ServicesPage() {
     });
   }, [router]);
 
-  async function handleAdd(e: React.FormEvent) {
+  function handleCancelEdit() {
+    setEditingId(null);
+    setName("");
+    setDuration("30");
+    setPrice("");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const supabase = createClient();
     const values = {
@@ -84,116 +86,93 @@ export default function ServicesPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleCancelEdit() {
-    setEditingId(null);
-    setName("");
-    setDuration("30");
-    setPrice("");
-  }
-
   async function handleDelete(id: string) {
     const supabase = createClient();
     const { error } = await supabase.from("services").delete().eq("id", id);
-    if (error) {
-      setMessage(error.message);
-    } else {
-      loadServices();
-    }
+    if (error) setMessage(error.message);
+    else loadServices();
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="text-sm text-gray-400">
-          {t.backDashboard}
-        </Link>
-        <LangSwitch />
-      </div>
-      <h1 className="mt-4 text-2xl font-bold">
-        {editingId ? t.editService : t.services}
-      </h1>
+    <>
+      <Navbar />
+      <main className="mx-auto max-w-2xl p-6">
+        <h1 className="text-2xl font-bold">
+          {editingId ? t.editService : t.services}
+        </h1>
 
-      {message && (
-        <p className="mt-4 rounded bg-gray-800 p-3 text-sm">{message}</p>
-      )}
-
-      <form
-        onSubmit={handleAdd}
-        className="mt-6 flex flex-col gap-3 rounded-lg border border-gray-700 p-5"
-      >
-        <input
-          className={fullInputClass}
-          placeholder={t.serviceName}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          className={fullInputClass}
-          type="number"
-          min="5"
-          step="5"
-          placeholder={t.duration}
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          required
-        />
-        <input
-          className={fullInputClass}
-          type="number"
-          min="0"
-          step="0.01"
-          placeholder={t.price}
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="rounded bg-blue-500 px-4 py-2 font-medium"
-        >
-          {editingId ? t.saveService : t.addService}
-        </button>
-        {editingId && (
-          <button
-            type="button"
-            className="rounded border border-gray-600 px-4 py-2"
-            onClick={handleCancelEdit}
-          >
-            {t.cancel}
-          </button>
+        {message && (
+          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {message}
+          </p>
         )}
-      </form>
 
-      <ul className="mt-6 flex flex-col gap-3">
-        {services.map((s) => (
-          <li
-            key={s.id}
-            className="flex items-center justify-between rounded-lg border border-gray-700 p-4"
-          >
-            <div>
-              <p className="font-bold">{s.name}</p>
-              <p className="text-sm text-gray-400">
-                {s.duration_minutes} {t.min}
-                {s.price !== null ? ` · ${s.price}` : ""}
-              </p>
+        <Card className="mt-6 p-5">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <Input
+              placeholder={t.serviceName}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              min="5"
+              step="5"
+              placeholder={t.duration}
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={t.price}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              {editingId && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCancelEdit}
+                >
+                  {t.cancel}
+                </Button>
+              )}
+              <Button type="submit">
+                {editingId ? t.saveService : t.addService}
+              </Button>
             </div>
-            <div className="flex gap-2">
-              <button
-                className="rounded border border-gray-600 px-3 py-1 text-sm"
-                onClick={() => handleEdit(s)}
-              >
-                {t.edit}
-              </button>
-              <button
-                className="rounded bg-red-600 px-3 py-1 text-sm"
-                onClick={() => handleDelete(s.id)}
-              >
-                {t.delete}
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </main>
+          </form>
+        </Card>
+
+        <ul className="mt-6 flex flex-col gap-3">
+          {services.map((s) => (
+            <li key={s.id}>
+              <Card className="flex items-center justify-between gap-4 p-4">
+                <div>
+                  <p className="font-bold">{s.name}</p>
+                  <p className="text-sm text-slate-500">
+                    {s.duration_minutes} {t.min}
+                    {s.price !== null ? ` · ${s.price}` : ""}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => handleEdit(s)}>
+                    {t.edit}
+                  </Button>
+                  <Button variant="danger" onClick={() => handleDelete(s.id)}>
+                    {t.delete}
+                  </Button>
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </>
   );
 }

@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase";
-import LangSwitch from "@/components/LangSwitch";
 import { useLanguage } from "@/lib/language";
+import Navbar from "@/components/Navbar";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import Card from "@/components/Card";
 
 type Client = {
   id: string;
@@ -13,9 +15,6 @@ type Client = {
   phone: string | null;
   email: string | null;
 };
-
-const fullInputClass =
-  "w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
 
 export default function ClientsPage() {
   const router = useRouter();
@@ -34,11 +33,8 @@ export default function ClientsPage() {
       .from("clients")
       .select("*")
       .order("name", { ascending: true });
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setClients(data ?? []);
-    }
+    if (error) setMessage(error.message);
+    else setClients(data ?? []);
   }
 
   useEffect(() => {
@@ -93,94 +89,85 @@ export default function ClientsPage() {
   async function handleDelete(id: string) {
     const supabase = createClient();
     const { error } = await supabase.from("clients").delete().eq("id", id);
-    if (error) {
-      setMessage(error.message);
-    } else {
-      loadClients();
-    }
+    if (error) setMessage(error.message);
+    else loadClients();
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="text-sm text-gray-400">
-          {t.backDashboard}
-        </Link>
-        <LangSwitch />
-      </div>
-      <h1 className="mt-4 text-2xl font-bold">
-        {editingId ? t.editClient : t.clients}
-      </h1>
+    <>
+      <Navbar />
+      <main className="mx-auto max-w-2xl p-6">
+        <h1 className="text-2xl font-bold">
+          {editingId ? t.editClient : t.clients}
+        </h1>
 
-      {message && <p className="mt-4 rounded bg-gray-800 p-3 text-sm">{message}</p>}
-
-      <form
-        onSubmit={handleSubmit}
-        className="mt-6 flex flex-col gap-3 rounded-lg border border-gray-700 p-5"
-      >
-        <input
-          className={fullInputClass}
-          placeholder={t.clientName}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          className={fullInputClass}
-          type="tel"
-          placeholder={t.phone}
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <input
-          className={fullInputClass}
-          type="email"
-          placeholder={t.clientEmail}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <button type="submit" className="rounded bg-blue-500 px-4 py-2 font-medium">
-          {editingId ? t.save : t.addClient}
-        </button>
-        {editingId && (
-          <button
-            type="button"
-            className="rounded border border-gray-600 px-4 py-2"
-            onClick={handleCancelEdit}
-          >
-            {t.cancel}
-          </button>
+        {message && (
+          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {message}
+          </p>
         )}
-      </form>
 
-      <ul className="mt-6 flex flex-col gap-3">
-        {clients.map((c) => (
-          <li
-            key={c.id}
-            className="flex items-center justify-between gap-4 rounded-lg border border-gray-700 p-4"
-          >
-            <div>
-              <p className="font-bold">{c.name}</p>
-              {c.phone && <p className="text-sm text-gray-400">{c.phone}</p>}
-              {c.email && <p className="text-sm text-gray-400">{c.email}</p>}
+        <Card className="mt-6 p-5">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <Input
+              placeholder={t.clientName}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              type="tel"
+              placeholder={t.phone}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <Input
+              type="email"
+              placeholder={t.clientEmail}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              {editingId && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCancelEdit}
+                >
+                  {t.cancel}
+                </Button>
+              )}
+              <Button type="submit">{editingId ? t.save : t.addClient}</Button>
             </div>
-            <div className="flex gap-2">
-              <button
-                className="rounded border border-gray-600 px-3 py-1 text-sm"
-                onClick={() => handleEdit(c)}
-              >
-                {t.edit}
-              </button>
-              <button
-                className="rounded bg-red-600 px-3 py-1 text-sm"
-                onClick={() => handleDelete(c.id)}
-              >
-                {t.delete}
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </main>
+          </form>
+        </Card>
+
+        <ul className="mt-6 flex flex-col gap-3">
+          {clients.map((c) => (
+            <li key={c.id}>
+              <Card className="flex items-center justify-between gap-4 p-4">
+                <div>
+                  <p className="font-bold">{c.name}</p>
+                  {c.phone && (
+                    <p className="text-sm text-slate-500">{c.phone}</p>
+                  )}
+                  {c.email && (
+                    <p className="text-sm text-slate-500">{c.email}</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => handleEdit(c)}>
+                    {t.edit}
+                  </Button>
+                  <Button variant="danger" onClick={() => handleDelete(c.id)}>
+                    {t.delete}
+                  </Button>
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </>
   );
 }
