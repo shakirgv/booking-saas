@@ -31,6 +31,13 @@ export default function DashboardPage() {
     const [notes, setNotes] = useState("");
     const [message, setMessage] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [plan, setPlan] = useState("free");
+
+    async function loadPlan() {
+        const supabase = createClient();
+        const { data } = await supabase.from("profiles").select("plan").single();
+        setPlan(data?.plan ?? "free");
+    }
 
     async function loadAppointments() {
         const supabase = createClient();
@@ -54,6 +61,8 @@ export default function DashboardPage() {
                 setEmail(data.user.email ?? "");
                 setUserId(data.user.id);
                 loadAppointments();
+                loadAppointments();
+                loadPlan();
             }
         });
     }, [router]);
@@ -136,6 +145,7 @@ return (
     <main className="flex min-h-screen flex-col items-center gap-6 p-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p>Signed in as {email}</p>
+        <p>Plan: {plan}</p>
 
         <form onSubmit={handleAdd} className="flex flex-col gap-3">
             <input
