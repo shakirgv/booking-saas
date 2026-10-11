@@ -83,6 +83,7 @@ export const translations = {
     editClient: "Edit client",
     addClient: "Add client",
     phone: "Phone (optional)",
+    selectClient: "Select a client (or type below)",
   },
   az: {
     free: "Pulsuz",
@@ -168,6 +169,7 @@ export const translations = {
     editClient: "Müştərini redaktə et",
     addClient: "Müştəri əlavə et",
     phone: "Telefon nömrəsi (məcburi deyil)",
+    selectClient: "Müştəri seç (və ya aşağıda yaz)",
   },
 };
 

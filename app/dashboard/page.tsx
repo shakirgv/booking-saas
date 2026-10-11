@@ -9,6 +9,7 @@ import Link from "next/link";
 type Appointment = {
   client_email: string | null;
   ends_at: string | null;
+  client_id: string | null;
   id: string;
   client_name: string;
   service: string;
@@ -20,6 +21,12 @@ type Service = {
   id: string;
   name: string;
   duration_minutes: number;
+};
+
+type Client = {
+  id: string;
+  name: string;
+  email: string | null;
 };
 
 const fullInputClass =
@@ -96,6 +103,8 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
   const [services, setServices] = useState<Service[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientId, setClientId] = useState("");
   const { lang, t, changeLang } = useLanguage();
   const locale = lang === "az" ? "az-AZ" : "en-GB";
   const [clientEmail, setClientEmail] = useState("");
@@ -113,6 +122,15 @@ export default function DashboardPage() {
       .select("id, name, duration_minutes")
       .order("name", { ascending: true });
     setServices(data ?? []);
+  }
+
+  async function loadClients() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("clients")
+      .select("id, name, email")
+      .order("name", { ascending: true });
+    setClients(data ?? []);
   }
 
   async function loadAppointments() {
@@ -140,6 +158,7 @@ export default function DashboardPage() {
         loadAppointments();
         loadPlan();
         loadServices();
+        loadClients();
       }
     });
   }, [router]);
@@ -169,6 +188,7 @@ export default function DashboardPage() {
       starts_at: date.toISOString(),
       ends_at: computeEnd(date.toISOString(), service).toISOString(),
       notes: notes || null,
+      client_id: clientId || null,
       client_email: clientEmail || null,
     };
 
@@ -187,6 +207,7 @@ export default function DashboardPage() {
       setStartsAt("");
       setNotes("");
       setClientEmail("");
+      setClientId("");
       setEditingId(null);
       loadAppointments();
     }
@@ -199,8 +220,18 @@ export default function DashboardPage() {
     setStartsAt(toLocalInputValue(a.starts_at));
     setNotes(a.notes ?? "");
     setClientEmail(a.client_email ?? "");
+    setClientId(a.client_id ?? "");
     setMessage("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleSelectClient(id: string) {
+    setClientId(id);
+    const match = clients.find((c) => c.id === id);
+    if (match) {
+      setClientname(match.name);
+      setClientEmail(match.email ?? "");
+    }
   }
 
   function handleCancelEdit() {
@@ -210,6 +241,7 @@ export default function DashboardPage() {
     setStartsAt("");
     setNotes("");
     setClientEmail("");
+    setClientId("");
   }
 
   async function handleDelete(id: string) {
@@ -384,6 +416,18 @@ export default function DashboardPage() {
           <h2 className="text-lg font-bold">
             {editingId ? t.editAppointment : t.newAppointment}
           </h2>
+          <select
+            className={fullInputClass}
+            value={clientId}
+            onChange={(e) => handleSelectClient(e.target.value)}
+          >
+            <option value="">{t.selectClient}</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
           <input
             className={fullInputClass}
             placeholder={t.clientName}

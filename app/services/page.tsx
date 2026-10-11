@@ -14,6 +14,7 @@ type Service = {
   price: number | null;
 };
 
+
 const fullInputClass =
   "w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
 
