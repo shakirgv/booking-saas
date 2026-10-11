@@ -15,6 +15,12 @@ type Appointment = {
   notes: string | null;
 };
 
+type Service = {
+  id: string;
+  name: string;
+  duration_minutes: number;
+};
+
 const fullInputClass =
   "w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
 
@@ -22,6 +28,13 @@ function toLocalInputValue(iso: string) {
   const d = new Date(iso);
   const offsetMs = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function formatTime(date: Date, locale: string) {
+  return date.toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function getGroupLabel(iso: string) {
@@ -81,6 +94,7 @@ export default function DashboardPage() {
   const [plan, setPlan] = useState("free");
   const [search, setSearch] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [services, setServices] = useState<Service[]>([]);
   const { lang, t, changeLang } = useLanguage();
   const locale = lang === "az" ? "az-AZ" : "en-GB";
   const [clientEmail, setClientEmail] = useState("");
@@ -89,6 +103,15 @@ export default function DashboardPage() {
     const supabase = createClient();
     const { data } = await supabase.from("profiles").select("plan").single();
     setPlan(data?.plan ?? "free");
+  }
+
+  async function loadServices() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("services")
+      .select("id, name, duration_minutes")
+      .order("name", { ascending: true });
+    setServices(data ?? []);
   }
 
   async function loadAppointments() {
@@ -115,6 +138,7 @@ export default function DashboardPage() {
         loadAppointments();
         loadAppointments();
         loadPlan();
+        loadServices();
       }
     });
   }, [router]);
@@ -262,6 +286,12 @@ export default function DashboardPage() {
     .filter((g) => g.items.length > 0);
 
   const weekDays = getWeekDays(weekOffset);
+    function endTimeFor(a: Appointment) {
+    const match = services.find((s) => s.name === a.service);
+    if (!match) return "";
+    const end = new Date(new Date(a.starts_at).getTime() + match.duration_minutes * 60000);
+    return formatTime(end, locale);
+  }
   const todayDate = new Date();
 
   return (
@@ -335,13 +365,24 @@ export default function DashboardPage() {
             onChange={(e) => setClientname(e.target.value)}
             required
           />
-          <input
+          <select
             className={fullInputClass}
-            placeholder={t.service}
             value={service}
             onChange={(e) => setService(e.target.value)}
             required
-          />
+          >
+            {services.length === 0 && (
+              <p className="text-xs text-gray-400">
+                No services yet. Add some on the Services page.
+              </p>
+            )}
+            <option value="">Select a service</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name} ({s.duration_minutes} min)
+              </option>
+            ))}
+          </select>
           <input
             className={fullInputClass}
             type="datetime-local"
@@ -412,6 +453,7 @@ export default function DashboardPage() {
                           <p className="text-sm text-blue-400">{a.service}</p>
                           <p className="text-sm text-gray-400">
                             {new Date(a.starts_at).toLocaleString()}
+                            {endTimeFor(a) && ` – ${endTimeFor(a)}`}
                           </p>
                           {a.client_email && (
                             <p className="text-sm text-gray-400">
@@ -484,6 +526,16 @@ export default function DashboardPage() {
               isSameDay(new Date(a.starts_at), day),
             );
             const isToday = isSameDay(day, todayDate);
+
+            function endTimeFor(a: Appointment) {
+              const match = services.find((s) => s.name === a.service);
+              if (!match) return "";
+              const end = new Date(
+                new Date(a.starts_at).getTime() +
+                  match.duration_minutes * 60000,
+              );
+              return formatTime(end, locale);
+            }
 
             return (
               <div
