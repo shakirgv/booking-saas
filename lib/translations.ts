@@ -69,6 +69,7 @@ export const translations = {
     proLimit: "Unlimited appointments",
     perMonth: " / month",
     getPro: "Get Pro",
+    overlap: "This time overlaps with another appointment.",
   },
   az: {
     free: "Pulsuz",
@@ -140,6 +141,7 @@ export const translations = {
     proLimit: "Limitsiz randevu",
     perMonth: " / ay",
     getPro: "Pro al",
+    overlap: "Bu vaxt başqa randevu ilə üst-üstə düşür.",
   },
 };
 

@@ -8,6 +8,7 @@ import Link from "next/link";
 
 type Appointment = {
   client_email: string | null;
+  ends_at: string | null;
   id: string;
   client_name: string;
   service: string;
@@ -151,10 +152,22 @@ export default function DashboardPage() {
       return;
     }
     const supabase = createClient();
+    const newEnd = computeEnd(date.toISOString(), service);
+    const overlaps = appointments.some(
+      (a) =>
+        a.id !== editingId &&
+        new Date(a.starts_at) < newEnd &&
+        new Date(a.ends_at ?? a.starts_at) > date,
+    );
+    if (overlaps) {
+      setMessage(t.overlap);
+      return;
+    }
     const values = {
       client_name: clientName,
       service,
       starts_at: date.toISOString(),
+      ends_at: computeEnd(date.toISOString(), service).toISOString(),
       notes: notes || null,
       client_email: clientEmail || null,
     };
@@ -286,10 +299,17 @@ export default function DashboardPage() {
     .filter((g) => g.items.length > 0);
 
   const weekDays = getWeekDays(weekOffset);
-    function endTimeFor(a: Appointment) {
+  function computeEnd(startIso: string, serviceName: string) {
+    const match = services.find((s) => s.name === serviceName);
+    const minutes = match ? match.duration_minutes : 30;
+    return new Date(new Date(startIso).getTime() + minutes * 60000);
+  }
+  function endTimeFor(a: Appointment) {
     const match = services.find((s) => s.name === a.service);
     if (!match) return "";
-    const end = new Date(new Date(a.starts_at).getTime() + match.duration_minutes * 60000);
+    const end = new Date(
+      new Date(a.starts_at).getTime() + match.duration_minutes * 60000,
+    );
     return formatTime(end, locale);
   }
   const todayDate = new Date();
