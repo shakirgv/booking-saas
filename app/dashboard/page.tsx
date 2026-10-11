@@ -41,6 +41,30 @@ function getGroupLabel(iso: string) {
   return "Later";
 }
 
+function getWeekDays(offset: number) {
+  const today = new Date();
+  const day = today.getDay(); // 0 = Sunday, 1 = Monday ...
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + diffToMonday + offset * 7,
+  );
+  return Array.from(
+    { length: 7 },
+    (_, i) =>
+      new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i),
+  );
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -54,6 +78,7 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
   const [search, setSearch] = useState("");
+  const [weekOffset, setWeekOffset] = useState(0);
   const [clientEmail, setClientEmail] = useState("");
 
   async function loadPlan() {
@@ -195,7 +220,9 @@ export default function DashboardPage() {
       body: JSON.stringify({ appointmentId: id }),
     });
     const json = await res.json();
-    setMessage(json.sent ? "Reminder sent!" : json.error ?? "Something went wrong");
+    setMessage(
+      json.sent ? "Reminder sent!" : (json.error ?? "Something went wrong"),
+    );
   }
 
   async function handleSignOut() {
@@ -221,6 +248,9 @@ export default function DashboardPage() {
       ),
     }))
     .filter((g) => g.items.length > 0);
+
+  const weekDays = getWeekDays(weekOffset);
+  const todayDate = new Date();
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl p-6">
@@ -361,8 +391,8 @@ export default function DashboardPage() {
                         <div className="flex gap-2">
                           {a.client_email && (
                             <button
-                            className="rounded border border-blue-500 px-3 py-1 text-sm"
-                            onClick={() => handleRemind(a.id)}
+                              className="rounded border border-blue-500 px-3 py-1 text-sm"
+                              onClick={() => handleRemind(a.id)}
                             >
                               Remind
                             </button>
@@ -389,6 +419,73 @@ export default function DashboardPage() {
           )}
         </section>
       </div>
+      <section className="mt-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">
+            Week of{" "}
+            {weekDays[0].toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+            })}
+          </h2>
+          <div className="flex gap-2">
+            <button
+              className="rounded border border-gray-600 px-3 py-1 text-sm"
+              onClick={() => setWeekOffset(weekOffset - 1)}
+            >
+              ← Previous
+            </button>
+            <button
+              className="rounded border border-gray-600 px-3 py-1 text-sm"
+              onClick={() => setWeekOffset(0)}
+            >
+              Today
+            </button>
+            <button
+              className="rounded border border-gray-600 px-3 py-1 text-sm"
+              onClick={() => setWeekOffset(weekOffset + 1)}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-4 lg:grid-cols-7">
+          {weekDays.map((day) => {
+            const dayAppointments = appointments.filter((a) =>
+              isSameDay(new Date(a.starts_at), day),
+            );
+            const isToday = isSameDay(day, todayDate);
+
+            return (
+              <div
+                key={day.toISOString()}
+                className={`min-h-32 rounded-lg border p-3 ${
+                  isToday ? "border-blue-500" : "border-gray-700"
+                }`}
+              >
+                <p className="text-xs font-bold uppercase text-gray-400">
+                  {day.toLocaleDateString("en-GB", { weekday: "short" })}
+                </p>
+                <p className="text-lg font-bold">{day.getDate()}</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {dayAppointments.map((a) => (
+                    <div key={a.id} className="rounded bg-gray-800 p-2 text-xs">
+                      <p className="font-bold text-blue-400">
+                        {new Date(a.starts_at).toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      <p>{a.client_name}</p>
+                      <p className="text-gray-400">{a.service}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }
