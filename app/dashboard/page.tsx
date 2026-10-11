@@ -181,6 +181,23 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleRemind(id: string) {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    const res = await fetch("/api/remind", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ appointmentId: id }),
+    });
+    const json = await res.json();
+    setMessage(json.sent ? "Reminder sent!" : json.error ?? "Something went wrong");
+  }
+
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -342,6 +359,14 @@ export default function DashboardPage() {
                           {a.notes && <p className="mt-1 text-sm">{a.notes}</p>}
                         </div>
                         <div className="flex gap-2">
+                          {a.client_email && (
+                            <button
+                            className="rounded border border-blue-500 px-3 py-1 text-sm"
+                            onClick={() => handleRemind(a.id)}
+                            >
+                              Remind
+                            </button>
+                          )}
                           <button
                             className="rounded border border-gray-600 px-3 py-1 text-sm"
                             onClick={() => handleEdit(a)}
