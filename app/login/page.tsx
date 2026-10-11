@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LangSwitch from "@/components/LangSwitch";
 import { useLanguage } from "@/lib/language";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import Card from "@/components/Card";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,47 +38,39 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-lg border border-gray-700 p-8">
+      <Card className="w-full max-w-sm p-8">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-sm text-gray-400">
+          <Link
+            href="/"
+            className="text-sm text-slate-500 hover:text-slate-700"
+          >
             {t.backHome}
           </Link>
           <LangSwitch />
         </div>
-        <h1 className="mt-4 text-2xl font-bold">{t.welcome}</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          {t.welcomeSub}
-        </p>
+        <h1 className="mt-6 text-2xl font-bold text-slate-900">{t.welcome}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t.welcomeSub}</p>
+
         <div className="mt-6 flex flex-col gap-3">
-          <input
-            className="w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
+          <Input
             type="email"
             placeholder={t.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <input
-            className="w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
+          <Input
             type="password"
             placeholder={t.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button
-            className="w-full rounded bg-blue-500 px-4 py-2 font-medium"
-            onClick={handleSignIn}
-          >
-            {t.signIn}
-          </button>
-          <button
-            className="w-full rounded border border-gray-600 px-4 py-2"
-            onClick={handleSignUp}
-          >
-            	{t.signUp}
-          </button>
+          <Button onClick={handleSignIn}>{t.signIn}</Button>
+          <Button variant="secondary" onClick={handleSignUp}>
+            {t.signUp}
+          </Button>
         </div>
-        <p className="mt-4 text-sm text-red-400">{message}</p>
-      </div>
+        {message && <p className="mt-4 text-sm text-red-600">{message}</p>}
+      </Card>
     </main>
   );
 }
