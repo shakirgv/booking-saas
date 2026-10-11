@@ -332,7 +332,7 @@ export default function DashboardPage() {
             href="/services"
             className="rounded border border-gray-600 px-3 py-1 text-sm"
           >
-            Services
+            {t.services}
           </Link>
           <span
             className={`rounded-full px-3 py-1 text-sm font-medium ${

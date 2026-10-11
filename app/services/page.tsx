@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import LangSwitch from "@/components/LangSwitch";
+import { useLanguage } from "@/lib/language";
 
 type Service = {
   id: string;
@@ -20,9 +22,11 @@ export default function ServicesPage() {
   const [userId, setUserId] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [name, setName] = useState("");
-  const [duration, setDuration] = useState("30");
+  const [duration, setDuration] = useState("");
   const [price, setPrice] = useState("");
   const [message, setMessage] = useState("");
+  const { t } = useLanguage();
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   async function loadServices() {
     const supabase = createClient();
@@ -52,21 +56,38 @@ export default function ServicesPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     const supabase = createClient();
-    const { error } = await supabase.from("services").insert({
-      user_id: userId,
+    const values = {
       name,
       duration_minutes: Number(duration),
       price: price ? Number(price) : null,
-    });
+    };
+
+    const { error } = editingId
+      ? await supabase.from("services").update(values).eq("id", editingId)
+      : await supabase.from("services").insert({ ...values, user_id: userId });
+
     if (error) {
       setMessage(error.message);
     } else {
       setMessage("");
-      setName("");
-      setDuration("30");
-      setPrice("");
+      handleCancelEdit();
       loadServices();
     }
+  }
+
+  function handleEdit(s: Service) {
+    setEditingId(s.id);
+    setName(s.name);
+    setDuration(String(s.duration_minutes));
+    setPrice(s.price !== null ? String(s.price) : "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setEditingId(null);
+    setName("");
+    setDuration("30");
+    setPrice("");
   }
 
   async function handleDelete(id: string) {
@@ -81,12 +102,19 @@ export default function ServicesPage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-2xl p-6">
-      <Link href="/dashboard" className="text-sm text-gray-400">
-        ← Dashboard
-      </Link>
-      <h1 className="mt-4 text-2xl font-bold">Services</h1>
+      <div className="flex items-center justify-between">
+        <Link href="/dashboard" className="text-sm text-gray-400">
+          {t.backDashboard}
+        </Link>
+        <LangSwitch />
+      </div>
+      <h1 className="mt-4 text-2xl font-bold">
+        {editingId ? t.editService : t.services}
+      </h1>
 
-      {message && <p className="mt-4 rounded bg-gray-800 p-3 text-sm">{message}</p>}
+      {message && (
+        <p className="mt-4 rounded bg-gray-800 p-3 text-sm">{message}</p>
+      )}
 
       <form
         onSubmit={handleAdd}
@@ -94,7 +122,7 @@ export default function ServicesPage() {
       >
         <input
           className={fullInputClass}
-          placeholder="Service name (e.g. Haircut)"
+          placeholder={t.serviceName}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -104,7 +132,7 @@ export default function ServicesPage() {
           type="number"
           min="5"
           step="5"
-          placeholder="Duration in minutes"
+          placeholder={t.duration}
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
           required
@@ -114,13 +142,25 @@ export default function ServicesPage() {
           type="number"
           min="0"
           step="0.01"
-          placeholder="Price (optional)"
+          placeholder={t.price}
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />
-        <button type="submit" className="rounded bg-blue-500 px-4 py-2 font-medium">
-          Add service
+        <button
+          type="submit"
+          className="rounded bg-blue-500 px-4 py-2 font-medium"
+        >
+          {editingId ? t.saveService : t.addService}
         </button>
+        {editingId && (
+          <button
+            type="button"
+            className="rounded border border-gray-600 px-4 py-2"
+            onClick={handleCancelEdit}
+          >
+            {t.cancel}
+          </button>
+        )}
       </form>
 
       <ul className="mt-6 flex flex-col gap-3">
@@ -132,15 +172,24 @@ export default function ServicesPage() {
             <div>
               <p className="font-bold">{s.name}</p>
               <p className="text-sm text-gray-400">
-                {s.duration_minutes} min{s.price !== null ? ` · ${s.price}` : ""}
+                {s.duration_minutes} {t.min}
+                {s.price !== null ? ` · ${s.price}` : ""}
               </p>
             </div>
-            <button
-              className="rounded bg-red-600 px-3 py-1 text-sm"
-              onClick={() => handleDelete(s.id)}
-            >
-              Delete
-            </button>
+            <div className="flex gap-2">
+              <button
+                className="rounded border border-gray-600 px-3 py-1 text-sm"
+                onClick={() => handleEdit(s)}
+              >
+                {t.edit}
+              </button>
+              <button
+                className="rounded bg-red-600 px-3 py-1 text-sm"
+                onClick={() => handleDelete(s.id)}
+              >
+                {t.delete}
+              </button>
+            </div>
           </li>
         ))}
       </ul>
