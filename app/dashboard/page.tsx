@@ -109,6 +109,23 @@ async function handleDelete(id: string) {
     }
 }
 
+async function handleUpgrade() {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    if (json.url){
+        window.location.href = json.url;
+    } else {
+        setMessage(json.error ?? "Something went wrong");
+    }
+}
+
 async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -179,6 +196,10 @@ return (
                 </li>
             ))}
         </ul>
+
+            <button className="rounded bg-green-600 px-4 py-2" onClick={handleUpgrade}>
+                Upgrade to Pro
+            </button>
 
         <button className="rounded bg-gray-600 px-4 py-2" onClick={handleSignOut}>
             Sign out
