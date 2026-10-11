@@ -159,6 +159,16 @@ export default function DashboardPage() {
     setNotes(a.notes ?? "");
     setClientEmail(a.client_email ?? "");
     setMessage("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setEditingId(null);
+    setClientname("");
+    setService("");
+    setStartsAt("");
+    setNotes("");
+    setClientEmail("");
   }
 
   async function handleDelete(id: string) {
@@ -344,6 +354,15 @@ export default function DashboardPage() {
           >
             {editingId ? "Save changes" : "Add appointment"}
           </button>
+          {editingId && (
+            <button
+            type="button"
+            className="rounded border border-gray-600 px-4 py-2"
+            onClick={handleCancelEdit}
+            >
+              Cancel
+            </button>
+          )}
         </form>
 
         <section className="md:col-span-2">
@@ -469,7 +488,11 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold">{day.getDate()}</p>
                 <div className="mt-2 flex flex-col gap-2">
                   {dayAppointments.map((a) => (
-                    <div key={a.id} className="rounded bg-gray-800 p-2 text-xs">
+                    <div
+                    key={a.id}
+                    className="cursor-pointer rounded bg-gray-800 p-2 text-xs hover:bg-gray-700"
+                    onClick={() => handleEdit(a)}
+                    >
                       <p className="font-bold text-blue-400">
                         {new Date(a.starts_at).toLocaleTimeString("en-GB", {
                           hour: "2-digit",
