@@ -14,6 +14,12 @@ type Appointment = {
 
 const inputClass = "w-72 rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
 
+function toLocalInputValue(iso: string) {
+    const d = new Date(iso);
+    const offsetMs = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 export default function DashboardPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
@@ -24,6 +30,7 @@ export default function DashboardPage() {
     const [startsAt, setStartsAt] = useState("");
     const [notes, setNotes] = useState("");
     const [message, setMessage] = useState("");
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     async function loadAppointments() {
         const supabase = createClient();
@@ -59,22 +66,36 @@ export default function DashboardPage() {
             return;
         }
         const supabase = createClient();
-        const { error } = await supabase.from("appointments").insert({
-            user_id: userId,
+        const values = {
             client_name: clientName, service,
-            starts_at: new Date(startsAt).toISOString(),
+            starts_at: date.toISOString(),
             notes: notes || null,
-        });
+        };
+        
+        const { error } = editingId
+        ? await supabase.from("appointments").update(values).eq("id", editingId)
+        : await supabase.from("appointments").insert({ ...values, user_id: userId });
+
         if (error) {
             setMessage(error.message);
         } else {
-            setMessage("Appointment added!");
+            setMessage(editingId ? "Appointment updated!" : "Appointment added!");
             setClientname("");
             setService("");
             setStartsAt("");
             setNotes("");
+            setEditingId(null);
             loadAppointments();
     }
+}
+
+function handleEdit(a: Appointment) {
+    setEditingId(a.id);
+    setClientname(a.client_name);
+    setService(a.service);
+    setStartsAt(toLocalInputValue(a.starts_at));
+    setNotes(a.notes ?? "");
+    setMessage("");
 }
 
 async function handleDelete(id: string) {
@@ -121,6 +142,7 @@ return (
   onChange={(e) => setStartsAt(e.target.value)}
   required
 />
+
             <input 
             className={inputClass}
             placeholder="Notes (optional)"
@@ -128,7 +150,9 @@ return (
             onChange={(e) => setNotes(e.target.value)}
         />
         <button type="submit" className="rounded bg-blue-500 px-4 py-2">
-            Add appointment
+        <button type="submit" className="rounded bg-blue-500 px-4 py-2">
+            {editingId ? "Save changes" : "Add appointment"}
+        </button>
         </button>
         </form>
 
@@ -142,6 +166,11 @@ return (
                         {new Date(a.starts_at).toLocaleString()}
                     </p>
                     {a.notes && <p className="text-sm">{a.notes}</p>}
+                    <button
+                    className="mt-2 mr-2 rounded bg-gray-600 px-3 py-1 text-sm"
+                    onClick={() => handleEdit(a)}>
+                    Edit
+                    </button>
                     <button 
                     className="mt-2 rounded bg-red-600 px-3 py-1 text-sm"
                     onClick={() => handleDelete(a.id)}> 
