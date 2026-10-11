@@ -4,9 +4,39 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
+type Appointment = {
+    id: string;
+    client_name: string;
+    service: string;
+    starts_at: string;
+    notes: string | null;
+};
+
+const inputClass = "w-72 rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
+
 export default function DashboardPage() {
     const router = useRouter();
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(" ");
+    const [userId, setUserId] = useState(" ");
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [clientName, setClientname] = useState(" ");
+    const [service, setService] = useState(" ");
+    const [startsAt, setStartsAt] = useState(" ");
+    const [notes, setNotes] = useState(" ");
+    const [message, setMessage] = useState(" ");
+
+    async function loadAppointments() {
+        const supabase = createClient();
+        const { data, error } = await supabase
+        .from("appointments")
+        .select("*")
+        .order("starts_at", { ascending: true });
+        if (error) {
+            setMessage(error.message);
+        } else {
+            setAppointments(data ?? []);
+        }
+    }
 
     useEffect(() => {
         const supabase = createClient();
@@ -14,10 +44,38 @@ export default function DashboardPage() {
             if (!data.user) {
                 router.push("/login");
             } else {
-                setEmail(data.user.email ?? " ");
+                setEmail(data.user.email ?? "");
+                setUserId(data.user.id);
+                loadAppointments();
             }
         });
-}, [router]);
+    }, [router]);
+
+    async function handleAdd(e: React.FormEvent) {
+        e.preventDefault();
+        const date = new Date(startsAt);
+        if (isNaN(date.getTime())) {
+            setMessage("Please choose a valid date and time");
+            return;
+        }
+        const supabase = createClient();
+        const { error } = await supabase.from("appointments").insert({
+            user_id: userId,
+            client_name: clientName, service,
+            starts_at: new Date(startsAt).toISOString(),
+            notes: notes || null,
+        });
+        if (error) {
+            setMessage(error.message);
+        } else {
+            setMessage("Appointment added!");
+            setClientname("");
+            setService("");
+            setStartsAt("");
+            setNotes("");
+            loadAppointments();
+    }
+}
 
 async function handleSignOut() {
     const supabase = createClient();
@@ -26,12 +84,60 @@ async function handleSignOut() {
 }
 
 return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4">
+    <main className="flex min-h-screen flex-col items-center gap-6 p-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p>Signed in as {email}</p>
+
+        <form onSubmit={handleAdd} className="flex flex-col gap-3">
+            <input
+            className={inputClass}
+            placeholder="Client Name"
+            value={clientName}
+            onChange={(e) => setClientname(e.target.value)}
+            required
+            />
+            <input 
+            className={inputClass}
+            placeholder="Service (e.g. Haircut)"
+            value={service}
+            onChange={(e) => setService(e.target.value)}
+            required
+            />
+            <input
+  className={inputClass}
+  type="datetime-local"
+  value={startsAt}
+  onChange={(e) => setStartsAt(e.target.value)}
+  required
+/>
+            <input 
+            className={inputClass}
+            placeholder="Notes (optional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+        />
+        <button type="submit" className="rounded bg-blue-500 px-4 py-2">
+            Add appointment
+        </button>
+        </form>
+
+        <p>{message}</p>
+
+        <ul className="flex w-full max-w-md flex-col gap-2">
+            {appointments.map((a) =>(
+                <li key={a.id} className="rounded border border-gray-600 p-3">
+                    <p className="font-bold">{a.client_name} - {a.service}</p>
+                    <p className="text-sm text-gray-400">
+                        {new Date(a.starts_at).toLocaleString()}
+                    </p>
+                    {a.notes && <p className="text-sm">{a.notes}</p>}
+                </li>
+            ))}
+        </ul>
+
         <button className="rounded bg-gray-600 px-4 py-2" onClick={handleSignOut}>
-        Sign out
+            Sign out
         </button>
     </main>
-);
+    );
 }
