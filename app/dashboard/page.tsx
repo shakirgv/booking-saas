@@ -21,6 +21,25 @@ function toLocalInputValue(iso: string) {
   return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
+function getGroupLabel(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  const startOfDayAfter = new Date(startOfToday);
+  startOfDayAfter.setDate(startOfDayAfter.getDate() + 2);
+
+  if (d < startOfToday) return "Past";
+  if (d < startOfTomorrow) return "Today";
+  if (d < startOfDayAfter) return "Tomorrow";
+  return "Later";
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -149,10 +168,20 @@ export default function DashboardPage() {
   const filteredAppointments = appointments.filter((a) => {
     const q = search.trim().toLowerCase();
     return (
-        a.client_name.toLowerCase().includes(q) ||
-        a.service.toLowerCase().includes(q)
+      a.client_name.toLowerCase().includes(q) ||
+      a.service.toLowerCase().includes(q)
     );
   });
+
+  const groupOrder = ["Today", "Tomorrow", "Later", "Past"];
+  const groups = groupOrder
+    .map((label) => ({
+      label,
+      items: filteredAppointments.filter(
+        (a) => getGroupLabel(a.starts_at) === label,
+      ),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl p-6">
@@ -238,47 +267,58 @@ export default function DashboardPage() {
             Appointments ({filteredAppointments.length})
           </h2>
           <input
-          className="mt-3 w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
-          placeholder="Search by client or service..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+            className="mt-3 w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
+            placeholder="Search by client or service..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
           {appointments.length === 0 ? (
-            <p className="mt-4 text-gray-400">No appointments yet. Add your first one.</p>
+            <p className="mt-4 text-gray-400">
+              No appointments yet. Add your first one.
+            </p>
           ) : filteredAppointments.length === 0 ? (
             <p className="mt-4 text-gray-400">No matches found.</p>
           ) : (
-            <ul className="mt-4 flex flex-col gap-3">
-                {filteredAppointments.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex items-start justify-between gap-4 rounded-lg border border-gray-700 p-4"
-                >
-                  <div>
-                    <p className="font-bold">{a.client_name}</p>
-                    <p className="text-sm text-blue-400">{a.service}</p>
-                    <p className="text-sm text-gray-400">
-                      {new Date(a.starts_at).toLocaleString()}
-                    </p>
-                    {a.notes && <p className="mt-1 text-sm">{a.notes}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="rounded border border-gray-600 px-3 py-1 text-sm"
-                      onClick={() => handleEdit(a)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="rounded bg-red-600 px-3 py-1 text-sm"
-                      onClick={() => handleDelete(a.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
+            <div className="mt-4 flex flex-col gap-6">
+              {groups.map((g) => (
+                <div key={g.label}>
+                  <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">
+                    {g.label} ({g.items.length})
+                  </h3>
+                  <ul className="flex flex-col gap-3">
+                    {g.items.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex items-start justify-between gap-4 rounded-lg border border-gray-700 p-4"
+                      >
+                        <div>
+                          <p className="font-bold">{a.client_name}</p>
+                          <p className="text-sm text-blue-400">{a.service}</p>
+                          <p className="text-sm text-gray-400">
+                            {new Date(a.starts_at).toLocaleString()}
+                          </p>
+                          {a.notes && <p className="mt-1 text-sm">{a.notes}</p>}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            className="rounded border border-gray-600 px-3 py-1 text-sm"
+                            onClick={() => handleEdit(a)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="rounded bg-red-600 px-3 py-1 text-sm"
+                            onClick={() => handleDelete(a.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
