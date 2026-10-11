@@ -4,45 +4,43 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useLanguage } from "@/lib/language";
-import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import Select from "@/components/Select";
+import Card from "@/components/Card";
 
 type Appointment = {
-  client_email: string | null;
-  ends_at: string | null;
-  client_id: string | null;
   id: string;
   client_name: string;
   service: string;
   starts_at: string;
+  ends_at: string | null;
+  client_id: string | null;
+  client_email: string | null;
   notes: string | null;
 };
 
-type Service = {
-  id: string;
-  name: string;
-  duration_minutes: number;
-};
+type Service = { id: string; name: string; duration_minutes: number };
+type Client = { id: string; name: string; email: string | null };
 
-type Client = {
-  id: string;
-  name: string;
-  email: string | null;
-};
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
 
-const fullInputClass =
-  "w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400";
+// One date format everywhere: 12.10.2026 14:30
+function formatDateTime(d: Date) {
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatTime(d: Date) {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 function toLocalInputValue(iso: string) {
   const d = new Date(iso);
   const offsetMs = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
-}
-
-function formatTime(date: Date, locale: string) {
-  return date.toLocaleTimeString(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function getGroupLabel(iso: string) {
@@ -66,7 +64,7 @@ function getGroupLabel(iso: string) {
 
 function getWeekDays(offset: number) {
   const today = new Date();
-  const day = today.getDay(); // 0 = Sunday, 1 = Monday ...
+  const day = today.getDay();
   const diffToMonday = day === 0 ? -6 : 1 - day;
   const monday = new Date(
     today.getFullYear(),
@@ -90,24 +88,37 @@ function isSameDay(a: Date, b: Date) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
+  const [plan, setPlan] = useState("free");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [clientName, setClientname] = useState("");
+  const [services, setServices] = useState<Service[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [service, setService] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [notes, setNotes] = useState("");
-  const [message, setMessage] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [plan, setPlan] = useState("free");
+
   const [search, setSearch] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
-  const [services, setServices] = useState<Service[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState("");
-  const { lang, t, changeLang } = useLanguage();
-  const locale = lang === "az" ? "az-AZ" : "en-GB";
-  const [clientEmail, setClientEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function loadAppointments() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("starts_at", { ascending: true });
+    if (error) setMessage(error.message);
+    else setAppointments(data ?? []);
+  }
 
   async function loadPlan() {
     const supabase = createClient();
@@ -133,19 +144,6 @@ export default function DashboardPage() {
     setClients(data ?? []);
   }
 
-  async function loadAppointments() {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("*")
-      .order("starts_at", { ascending: true });
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setAppointments(data ?? []);
-    }
-  }
-
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
@@ -155,13 +153,57 @@ export default function DashboardPage() {
         setEmail(data.user.email ?? "");
         setUserId(data.user.id);
         loadAppointments();
-        loadAppointments();
         loadPlan();
         loadServices();
         loadClients();
       }
     });
   }, [router]);
+
+  function resetForm() {
+    setEditingId(null);
+    setClientId("");
+    setClientName("");
+    setClientEmail("");
+    setService("");
+    setStartsAt("");
+    setNotes("");
+  }
+
+  function openNew() {
+    resetForm();
+    setMessage("");
+    setOpen(true);
+  }
+
+  function closeModal() {
+    setOpen(false);
+    resetForm();
+  }
+
+  function handleSelectClient(id: string) {
+    setClientId(id);
+    const match = clients.find((c) => c.id === id);
+    if (match) {
+      setClientName(match.name);
+      setClientEmail(match.email ?? "");
+    }
+  }
+
+  function computeEnd(startIso: string, serviceName: string) {
+    const match = services.find((s) => s.name === serviceName);
+    const minutes = match ? match.duration_minutes : 30;
+    return new Date(new Date(startIso).getTime() + minutes * 60000);
+  }
+
+  function endTimeFor(a: Appointment) {
+    const match = services.find((s) => s.name === a.service);
+    if (!match) return "";
+    const end = new Date(
+      new Date(a.starts_at).getTime() + match.duration_minutes * 60000,
+    );
+    return formatTime(end);
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -182,11 +224,12 @@ export default function DashboardPage() {
       setMessage(t.overlap);
       return;
     }
+
     const values = {
       client_name: clientName,
       service,
       starts_at: date.toISOString(),
-      ends_at: computeEnd(date.toISOString(), service).toISOString(),
+      ends_at: newEnd.toISOString(),
       notes: notes || null,
       client_id: clientId || null,
       client_email: clientEmail || null,
@@ -202,46 +245,21 @@ export default function DashboardPage() {
       setMessage(error.message);
     } else {
       setMessage(editingId ? t.updated : t.added);
-      setClientname("");
-      setService("");
-      setStartsAt("");
-      setNotes("");
-      setClientEmail("");
-      setClientId("");
-      setEditingId(null);
+      closeModal();
       loadAppointments();
     }
   }
 
   function handleEdit(a: Appointment) {
     setEditingId(a.id);
-    setClientname(a.client_name);
+    setClientId(a.client_id ?? "");
+    setClientName(a.client_name);
+    setClientEmail(a.client_email ?? "");
     setService(a.service);
     setStartsAt(toLocalInputValue(a.starts_at));
     setNotes(a.notes ?? "");
-    setClientEmail(a.client_email ?? "");
-    setClientId(a.client_id ?? "");
     setMessage("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function handleSelectClient(id: string) {
-    setClientId(id);
-    const match = clients.find((c) => c.id === id);
-    if (match) {
-      setClientname(match.name);
-      setClientEmail(match.email ?? "");
-    }
-  }
-
-  function handleCancelEdit() {
-    setEditingId(null);
-    setClientname("");
-    setService("");
-    setStartsAt("");
-    setNotes("");
-    setClientEmail("");
-    setClientId("");
+    setOpen(true);
   }
 
   async function handleDelete(id: string) {
@@ -255,61 +273,36 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleUpgrade() {
+  async function callApi(path: string, body?: object) {
     const supabase = createClient();
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const json = await res.json();
-    if (json.url) {
-      window.location.href = json.url;
-    } else {
-      setMessage(json.error ?? t.error);
-    }
-  }
-
-  async function handleManage() {
-    const supabase = createClient();
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-
-    const res = await fetch("/api/portal", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const json = await res.json();
-    if (json.url) {
-      window.location.href = json.url;
-    } else {
-      setMessage(json.error ?? t.error);
-    }
-  }
-
-  async function handleRemind(id: string) {
-    const supabase = createClient();
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-
-    const res = await fetch("/api/remind", {
+    const res = await fetch(path, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ appointmentId: id }),
+      body: body ? JSON.stringify(body) : undefined,
     });
-    const json = await res.json();
-    setMessage(json.sent ? t.reminderSent : (json.error ?? t.error));
+    return res.json();
   }
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+  async function handleUpgrade() {
+    const json = await callApi("/api/checkout");
+    if (json.url) window.location.href = json.url;
+    else setMessage(json.error ?? t.error);
+  }
+
+  async function handleManage() {
+    const json = await callApi("/api/portal");
+    if (json.url) window.location.href = json.url;
+    else setMessage(json.error ?? t.error);
+  }
+
+  async function handleRemind(id: string) {
+    const json = await callApi("/api/remind", { appointmentId: id });
+    setMessage(json.sent ? t.reminderSent : (json.error ?? t.error));
   }
 
   const filteredAppointments = appointments.filter((a) => {
@@ -331,202 +324,151 @@ export default function DashboardPage() {
     .filter((g) => g.items.length > 0);
 
   const weekDays = getWeekDays(weekOffset);
-  function computeEnd(startIso: string, serviceName: string) {
-    const match = services.find((s) => s.name === serviceName);
-    const minutes = match ? match.duration_minutes : 30;
-    return new Date(new Date(startIso).getTime() + minutes * 60000);
-  }
-  function endTimeFor(a: Appointment) {
-    const match = services.find((s) => s.name === a.service);
-    if (!match) return "";
-    const end = new Date(
-      new Date(a.starts_at).getTime() + match.duration_minutes * 60000,
-    );
-    return formatTime(end, locale);
-  }
   const todayDate = new Date();
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl p-6">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-700 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Slotly</h1>
-          <p className="text-sm text-gray-400">{email}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            className="rounded border border-gray-600 px-3 py-1 text-sm"
-            onClick={() => changeLang(lang === "en" ? "az" : "en")}
-          >
-            {lang === "en" ? "AZ" : "EN"}
-          </button>
-          <Link
-            href="/services"
-            className="rounded border border-gray-600 px-3 py-1 text-sm"
-          >
-            {t.services}
-          </Link>
-          <Link
-            href="/clients"
-            className="rounded border border-gray-600 px-3 py-1 text-sm"
-          >
-            {t.clients}
-          </Link>
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-medium ${
-              plan === "pro" ? "bg-green-600" : "bg-gray-700"
-            }`}
-          >
-            {plan === "pro" ? t.pro : t.free}
-          </span>
-          {plan !== "pro" && (
-            <button
-              className="rounded bg-green-600 px-4 py-2 text-sm font-medium"
-              onClick={handleUpgrade}
+    <>
+      <Navbar />
+      <main className="mx-auto max-w-6xl p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">{t.navDashboard}</h1>
+            <p className="text-sm text-slate-500">{email}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${
+                plan === "pro"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-slate-200 text-slate-600"
+              }`}
             >
-              {t.upgrade}
-            </button>
-          )}
-          {plan === "pro" && (
-            <button
-              className="rounded border border-gray-600 px-4 py-2 text-sm"
-              onClick={handleManage}
-            >
-              {t.manage}
-            </button>
-          )}
-          <button
-            className="rounded border border-gray-600 px-4 py-2 text-sm"
-            onClick={handleSignOut}
-          >
-            {t.signOut}
-          </button>
-        </div>
-      </header>
-
-      {message && (
-        <p className="mt-4 rounded bg-gray-800 p-3 text-sm">{message}</p>
-      )}
-
-      <div className="mt-6 grid gap-6 md:grid-cols-3">
-        <form
-          onSubmit={handleAdd}
-          className="flex flex-col gap-3 rounded-lg border border-gray-700 p-5 md:col-span-1"
-        >
-          <h2 className="text-lg font-bold">
-            {editingId ? t.editAppointment : t.newAppointment}
-          </h2>
-          <select
-            className={fullInputClass}
-            value={clientId}
-            onChange={(e) => handleSelectClient(e.target.value)}
-          >
-            <option value="">{t.selectClient}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className={fullInputClass}
-            placeholder={t.clientName}
-            value={clientName}
-            onChange={(e) => setClientname(e.target.value)}
-            required
-          />
-          <select
-            className={fullInputClass}
-            value={service}
-            onChange={(e) => setService(e.target.value)}
-            required
-          >
-            {services.length === 0 && (
-              <p className="text-xs text-gray-400">
-                No services yet. Add some on the Services page.
-              </p>
+              {plan === "pro" ? t.pro : t.free}
+            </span>
+            {plan === "pro" ? (
+              <Button variant="secondary" onClick={handleManage}>
+                {t.manage}
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={handleUpgrade}>
+                {t.upgrade}
+              </Button>
             )}
-            <option value="">Select a service</option>
-            {services.map((s) => (
-              <option key={s.id} value={s.name}>
-                {s.name} ({s.duration_minutes} min)
-              </option>
-            ))}
-          </select>
-          <input
-            className={fullInputClass}
-            type="datetime-local"
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-            required
-          />
-          <input
-            className={fullInputClass}
-            type="email"
-            placeholder={t.clientEmail}
-            value={clientEmail}
-            onChange={(e) => setClientEmail(e.target.value)}
-          />
-          <input
-            className={fullInputClass}
-            placeholder={t.notes}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="rounded bg-blue-500 px-4 py-2 font-medium"
-          >
-            {editingId ? t.save : t.add}
-          </button>
-          {editingId && (
-            <button
-              type="button"
-              className="rounded border border-gray-600 px-4 py-2"
-              onClick={handleCancelEdit}
-            >
-              {t.cancel}
-            </button>
-          )}
-        </form>
+            <Button onClick={openNew}>+ {t.newAppointment}</Button>
+          </div>
+        </div>
 
-        <section className="md:col-span-2">
+        {message && (
+          <p className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            {message}
+          </p>
+        )}
+
+        <Card className="mt-6 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-bold">
+              {t.weekOf} {pad(weekDays[0].getDate())}.
+              {pad(weekDays[0].getMonth() + 1)}
+            </h2>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setWeekOffset(weekOffset - 1)}
+              >
+                {t.previous}
+              </Button>
+              <Button variant="secondary" onClick={() => setWeekOffset(0)}>
+                {t.today}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setWeekOffset(weekOffset + 1)}
+              >
+                {t.next}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-4 lg:grid-cols-7">
+            {weekDays.map((day) => {
+              const dayAppointments = appointments.filter((a) =>
+                isSameDay(new Date(a.starts_at), day),
+              );
+              const isToday = isSameDay(day, todayDate);
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`min-h-36 rounded-lg border p-2 ${
+                    isToday
+                      ? "border-blue-500 bg-blue-50/50"
+                      : "border-slate-200"
+                  }`}
+                >
+                  <p className="text-xs font-bold uppercase text-slate-500">
+                    {t.days[(day.getDay() + 6) % 7]}
+                  </p>
+                  <p className="text-lg font-bold">{day.getDate()}</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {dayAppointments.map((a) => (
+                      <div
+                        key={a.id}
+                        className="cursor-pointer rounded-md bg-blue-600 p-2 text-xs text-white hover:bg-blue-700"
+                        onClick={() => handleEdit(a)}
+                      >
+                        <p className="font-bold">
+                          {formatTime(new Date(a.starts_at))}
+                          {endTimeFor(a) && `–${endTimeFor(a)}`}
+                        </p>
+                        <p>{a.client_name}</p>
+                        <p className="text-blue-100">{a.service}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="mt-6 p-5">
           <h2 className="text-lg font-bold">
             {t.appointments} ({filteredAppointments.length})
           </h2>
-          <input
-            className="mt-3 w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
+          <Input
+            className="mt-3"
             placeholder={t.search}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+
           {appointments.length === 0 ? (
-            <p className="mt-4 text-gray-400">{t.empty}</p>
+            <p className="mt-4 text-slate-500">{t.empty}</p>
           ) : filteredAppointments.length === 0 ? (
-            <p className="mt-4 text-gray-400">{t.noMatches}</p>
+            <p className="mt-4 text-slate-500">{t.noMatches}</p>
           ) : (
             <div className="mt-4 flex flex-col gap-6">
               {groups.map((g) => (
                 <div key={g.label}>
-                  <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                     {t.groups[g.label as keyof typeof t.groups]} (
                     {g.items.length})
                   </h3>
-                  <ul className="flex flex-col gap-3">
+                  <ul className="flex flex-col gap-2">
                     {g.items.map((a) => (
                       <li
                         key={a.id}
-                        className="flex items-start justify-between gap-4 rounded-lg border border-gray-700 p-4"
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3"
                       >
                         <div>
                           <p className="font-bold">{a.client_name}</p>
-                          <p className="text-sm text-blue-400">{a.service}</p>
-                          <p className="text-sm text-gray-400">
-                            {new Date(a.starts_at).toLocaleString()}
+                          <p className="text-sm text-blue-600">{a.service}</p>
+                          <p className="text-sm text-slate-500">
+                            {formatDateTime(new Date(a.starts_at))}
                             {endTimeFor(a) && ` – ${endTimeFor(a)}`}
                           </p>
                           {a.client_email && (
-                            <p className="text-sm text-gray-400">
+                            <p className="text-sm text-slate-500">
                               {a.client_email}
                             </p>
                           )}
@@ -534,25 +476,25 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex gap-2">
                           {a.client_email && (
-                            <button
-                              className="rounded border border-blue-500 px-3 py-1 text-sm"
+                            <Button
+                              variant="secondary"
                               onClick={() => handleRemind(a.id)}
                             >
                               {t.remind}
-                            </button>
+                            </Button>
                           )}
-                          <button
-                            className="rounded border border-gray-600 px-3 py-1 text-sm"
+                          <Button
+                            variant="secondary"
                             onClick={() => handleEdit(a)}
                           >
                             {t.edit}
-                          </button>
-                          <button
-                            className="rounded bg-red-600 px-3 py-1 text-sm"
+                          </Button>
+                          <Button
+                            variant="danger"
                             onClick={() => handleDelete(a.id)}
                           >
                             {t.delete}
-                          </button>
+                          </Button>
                         </div>
                       </li>
                     ))}
@@ -561,86 +503,82 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </section>
-      </div>
-      <section className="mt-10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">
-            {t.weekOf} {String(weekDays[0].getDate()).padStart(2, "0")}.
-            {String(weekDays[0].getMonth() + 1).padStart(2, "0")}
-          </h2>
-          <div className="flex gap-2">
-            <button
-              className="rounded border border-gray-600 px-3 py-1 text-sm"
-              onClick={() => setWeekOffset(weekOffset - 1)}
-            >
-              {t.previous}
-            </button>
-            <button
-              className="rounded border border-gray-600 px-3 py-1 text-sm"
-              onClick={() => setWeekOffset(0)}
-            >
-              {t.today}
-            </button>
-            <button
-              className="rounded border border-gray-600 px-3 py-1 text-sm"
-              onClick={() => setWeekOffset(weekOffset + 1)}
-            >
-              {t.next}
-            </button>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-4 lg:grid-cols-7">
-          {weekDays.map((day) => {
-            const dayAppointments = appointments.filter((a) =>
-              isSameDay(new Date(a.starts_at), day),
-            );
-            const isToday = isSameDay(day, todayDate);
+        </Card>
+      </main>
 
-            function endTimeFor(a: Appointment) {
-              const match = services.find((s) => s.name === a.service);
-              if (!match) return "";
-              const end = new Date(
-                new Date(a.starts_at).getTime() +
-                  match.duration_minutes * 60000,
-              );
-              return formatTime(end, locale);
-            }
-
-            return (
-              <div
-                key={day.toISOString()}
-                className={`min-h-32 rounded-lg border p-3 ${
-                  isToday ? "border-blue-500" : "border-gray-700"
-                }`}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          onClick={closeModal}
+        >
+          <Card
+            className="w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold">
+              {editingId ? t.editAppointment : t.newAppointment}
+            </h2>
+            {message && <p className="mt-3 text-sm text-red-600">{message}</p>}
+            <form onSubmit={handleAdd} className="mt-4 flex flex-col gap-3">
+              <Select
+                value={clientId}
+                onChange={(e) => handleSelectClient(e.target.value)}
               >
-                <p className="text-xs font-bold uppercase text-gray-400">
-                  {t.days[(day.getDay() + 6) % 7]}
-                </p>
-                <p className="text-lg font-bold">{day.getDate()}</p>
-                <div className="mt-2 flex flex-col gap-2">
-                  {dayAppointments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="cursor-pointer rounded bg-gray-800 p-2 text-xs hover:bg-gray-700"
-                      onClick={() => handleEdit(a)}
-                    >
-                      <p className="font-bold text-blue-400">
-                        {new Date(a.starts_at).toLocaleTimeString(locale, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      <p>{a.client_name}</p>
-                      <p className="text-gray-400">{a.service}</p>
-                    </div>
-                  ))}
-                </div>
+                <option value="">{t.selectClient}</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                placeholder={t.clientName}
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                required
+              />
+              <Select
+                value={service}
+                onChange={(e) => setService(e.target.value)}
+                required
+              >
+                <option value="">{t.selectService}</option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name} ({s.duration_minutes} {t.min})
+                  </option>
+                ))}
+              </Select>
+              {services.length === 0 && (
+                <p className="text-xs text-slate-500">{t.noServices}</p>
+              )}
+              <Input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                required
+              />
+              <Input
+                type="email"
+                placeholder={t.clientEmail}
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+              />
+              <Input
+                placeholder={t.notes}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={closeModal}>
+                  {t.cancel}
+                </Button>
+                <Button type="submit">{editingId ? t.save : t.add}</Button>
               </div>
-            );
-          })}
+            </form>
+          </Card>
         </div>
-      </section>
-    </main>
+      )}
+    </>
   );
 }

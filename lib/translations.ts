@@ -84,6 +84,9 @@ export const translations = {
     addClient: "Add client",
     phone: "Phone (optional)",
     selectClient: "Select a client (or type below)",
+    navDashboard: "Dashboard",
+    selectService: "Select a service",
+    noServices: "No services yet. Add some on the Services page.",
   },
   az: {
     free: "Pulsuz",
@@ -170,6 +173,9 @@ export const translations = {
     addClient: "Müştəri əlavə et",
     phone: "Telefon nömrəsi (məcburi deyil)",
     selectClient: "Müştəri seç (və ya aşağıda yaz)",
+    navDashboard: "Panel",
+    selectService: "Xidmət seç",
+    noServices: "Hələ xidmət yoxdur. Xidmətlər səhifəsində əlavə et.",
   },
 };
 
