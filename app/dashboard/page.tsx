@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 type Appointment = {
+  client_email: string | null;
   id: string;
   client_name: string;
   service: string;
@@ -53,6 +54,7 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
   const [search, setSearch] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
 
   async function loadPlan() {
     const supabase = createClient();
@@ -101,6 +103,7 @@ export default function DashboardPage() {
       service,
       starts_at: date.toISOString(),
       notes: notes || null,
+      client_email: clientEmail || null,
     };
 
     const { error } = editingId
@@ -117,6 +120,7 @@ export default function DashboardPage() {
       setService("");
       setStartsAt("");
       setNotes("");
+      setClientEmail("");
       setEditingId(null);
       loadAppointments();
     }
@@ -128,6 +132,7 @@ export default function DashboardPage() {
     setService(a.service);
     setStartsAt(toLocalInputValue(a.starts_at));
     setNotes(a.notes ?? "");
+    setClientEmail(a.client_email ?? "");
     setMessage("");
   }
 
@@ -275,6 +280,13 @@ export default function DashboardPage() {
           />
           <input
             className={fullInputClass}
+            type="email"
+            placeholder="Client email (optional)"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+          />
+          <input
+            className={fullInputClass}
             placeholder="Notes (optional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -322,6 +334,11 @@ export default function DashboardPage() {
                           <p className="text-sm text-gray-400">
                             {new Date(a.starts_at).toLocaleString()}
                           </p>
+                          {a.client_email && (
+                            <p className="text-sm text-gray-400">
+                              {a.client_email}
+                            </p>
+                          )}
                           {a.notes && <p className="mt-1 text-sm">{a.notes}</p>}
                         </div>
                         <div className="flex gap-2">
