@@ -38,6 +38,37 @@ export const translations = {
     invalidDate: "Please choose a valid date and time.",
     error: "Something went wrong",
     days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    backHome: "← Back to home",
+    welcome: "Welcome to Slotly",
+    welcomeSub: "Sign in or create an account.",
+    email: "Email",
+    password: "Password",
+    signIn: "Sign in",
+    signUp: "Sign up",
+    signedUp: "Signed up successfully!",
+    heroTitle: "Appointments, without the chaos.",
+    heroText:
+      "Slotly helps you manage client bookings in one simple dashboard.",
+    getStarted: "Get started free",
+    features: [
+      {
+        title: "Simple scheduling",
+        text: "Add, edit and delete appointments in seconds.",
+      },
+      {
+        title: "Private by design",
+        text: "Every account only ever sees its own data.",
+      },
+      {
+        title: "Grow at your pace",
+        text: "Start free and upgrade to Pro when you need more.",
+      },
+    ],
+    pricing: "Pricing",
+    freeLimit: "Up to 5 appointments",
+    proLimit: "Unlimited appointments",
+    perMonth: " / month",
+    getPro: "Get Pro",
   },
   az: {
     free: "Pulsuz",
@@ -78,6 +109,37 @@ export const translations = {
     invalidDate: "Düzgün tarix və saat seçin.",
     error: "Nəsə xəta baş verdi",
     days: ["B.e.", "Ç.a.", "Çər.", "C.a.", "Cümə", "Şən.", "Baz."],
+    backHome: "← Ana səhifəyə qayıt",
+    welcome: "Slotly-yə xoş gəlmisiniz",
+    welcomeSub: "Daxil olun və ya hesab yaradın.",
+    email: "Email",
+    password: "Parol",
+    signIn: "Daxil ol",
+    signUp: "Qeydiyyat",
+    signedUp: "Qeydiyyat uğurla tamamlandı!",
+    heroTitle: "Randevular, qarışıqlıqsız.",
+    heroText:
+      "Slotly müştəri rezervasiyalarını tək bir sadə paneldə idarə etməyə kömək edir.",
+    getStarted: "Pulsuz başla",
+    features: [
+      {
+        title: "Sadə planlama",
+        text: "Randevuları saniyələr içində əlavə et, redaktə et və sil.",
+      },
+      {
+        title: "Məxfilik ilk növbədə",
+        text: "Hər hesab yalnız öz məlumatını görür.",
+      },
+      {
+        title: "Öz templə böyü",
+        text: "Pulsuz başla, daha çox lazım olanda Pro-ya keç.",
+      },
+    ],
+    pricing: "Qiymətlər",
+    freeLimit: "5 randevuya qədər",
+    proLimit: "Limitsiz randevu",
+    perMonth: " / ay",
+    getPro: "Pro al",
   },
 };
 

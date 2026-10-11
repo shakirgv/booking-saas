@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
-import { translations, type Lang } from "@/lib/translations";
+import { useLanguage } from "@/lib/language";
 
 type Appointment = {
   client_email: string | null;
@@ -80,8 +80,7 @@ export default function DashboardPage() {
   const [plan, setPlan] = useState("free");
   const [search, setSearch] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
-  const [lang, setLang] = useState<Lang>("en");
-  const t = translations[lang];
+  const { lang, t, changeLang } = useLanguage();
   const locale = lang === "az" ? "az-AZ" : "en-GB";
   const [clientEmail, setClientEmail] = useState("");
 
@@ -118,20 +117,6 @@ export default function DashboardPage() {
       }
     });
   }, [router]);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("lang");
-      if (saved === "en" || saved === "az") setLang(saved);
-    } catch {}
-  }, []);
-
-  function changeLang(next: Lang) {
-    setLang(next);
-    try {
-      localStorage.setItem("lang", next);
-    } catch {}
-  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
