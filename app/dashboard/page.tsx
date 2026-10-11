@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [message, setMessage] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [plan, setPlan] = useState("free");
+  const [search, setSearch] = useState("");
 
   async function loadPlan() {
     const supabase = createClient();
@@ -145,6 +146,14 @@ export default function DashboardPage() {
     router.push("/login");
   }
 
+  const filteredAppointments = appointments.filter((a) => {
+    const q = search.trim().toLowerCase();
+    return (
+        a.client_name.toLowerCase().includes(q) ||
+        a.service.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <main className="mx-auto min-h-screen max-w-5xl p-6">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-700 pb-4">
@@ -226,15 +235,21 @@ export default function DashboardPage() {
 
         <section className="md:col-span-2">
           <h2 className="text-lg font-bold">
-            Appointments ({appointments.length})
+            Appointments ({filteredAppointments.length})
           </h2>
+          <input
+          className="mt-3 w-full rounded border border-gray-500 bg-gray-800 p-2 text-white placeholder-gray-400"
+          placeholder="Search by client or service..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          />
           {appointments.length === 0 ? (
-            <p className="mt-4 text-gray-400">
-              No appointments yet. Add your first one.
-            </p>
+            <p className="mt-4 text-gray-400">No appointments yet. Add your first one.</p>
+          ) : filteredAppointments.length === 0 ? (
+            <p className="mt-4 text-gray-400">No matches found.</p>
           ) : (
             <ul className="mt-4 flex flex-col gap-3">
-              {appointments.map((a) => (
+                {filteredAppointments.map((a) => (
                 <li
                   key={a.id}
                   className="flex items-start justify-between gap-4 rounded-lg border border-gray-700 p-4"
